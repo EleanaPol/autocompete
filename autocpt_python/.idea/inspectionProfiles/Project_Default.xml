@@ -1,0 +1,86 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <list>
+          <option value="numpy" />
+          <option value="tensorflow" />
+          <option value="pandas" />
+          <option value="scikit-learn" />
+          <option value="matplotlib" />
+          <option value="pacmap" />
+          <option value="PyYAML" />
+          <option value="tqdm" />
+          <option value="python-osc" />
+          <option value="absl-py" />
+          <option value="annoy" />
+          <option value="astunparse" />
+          <option value="certifi" />
+          <option value="charset-normalizer" />
+          <option value="contourpy" />
+          <option value="cryptography" />
+          <option value="cycler" />
+          <option value="flatbuffers" />
+          <option value="fonttools" />
+          <option value="gast" />
+          <option value="google-auth" />
+          <option value="google-auth-oauthlib" />
+          <option value="google-pasta" />
+          <option value="grpcio" />
+          <option value="h5py" />
+          <option value="idna" />
+          <option value="importlib-metadata" />
+          <option value="importlib-resources" />
+          <option value="joblib" />
+          <option value="keras" />
+          <option value="keras-preprocessing" />
+          <option value="kiwisolver" />
+          <option value="libclang" />
+          <option value="llvmlite" />
+          <option value="markdown" />
+          <option value="markupsafe" />
+          <option value="numba" />
+          <option value="oauthlib" />
+          <option value="opt-einsum" />
+          <option value="packaging" />
+          <option value="pillow" />
+          <option value="protobuf" />
+          <option value="pyasn1" />
+          <option value="pyasn1-modules" />
+          <option value="pyparsing" />
+          <option value="python-dateutil" />
+          <option value="pytz" />
+          <option value="pyyaml" />
+          <option value="requests" />
+          <option value="requests-oauthlib" />
+          <option value="rsa" />
+          <option value="scipy" />
+          <option value="setuptools" />
+          <option value="six" />
+          <option value="tensorboard" />
+          <option value="tensorboard-data-server" />
+          <option value="tensorboard-plugin-wit" />
+          <option value="tensorflow-estimator" />
+          <option value="tensorflow-io-gcs-filesystem" />
+          <option value="termcolor" />
+          <option value="threadpoolctl" />
+          <option value="typing-extensions" />
+          <option value="tzdata" />
+          <option value="urllib3" />
+          <option value="werkzeug" />
+          <option value="wheel" />
+          <option value="wrapt" />
+          <option value="zipp" />
+        </list>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyPep8Inspection" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <option name="ignoredErrors">
+        <list>
+          <option value="E303" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>

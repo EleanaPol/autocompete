@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>autocompete</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <header>
+    <h1>Autocompete</h1>
+    <span id="status">—</span>
+  </header>
+
+  <div id="editor-container">
+    <textarea id="editor" spellcheck="false" placeholder="begin writing."></textarea>
+    <div id="assistant-cursor"></div>
+  </div>
+
+  <p id="hint">the assistant is watching. it will speak when you pause.</p>
+
+  <script src="/static/editor.js"></script>
+</body>
+</html>
