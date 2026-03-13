@@ -6,6 +6,7 @@ from claude_client import ClaudeClient
 from prompt import pick_mode, build_prompt, SYSTEM_PROMPT
 import asyncio, json, os
 import unicodedata
+import re
 
 
 
@@ -22,6 +23,30 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 class EditRequest(BaseModel):
     text: str
     cursor_position: int
+    background: bool = False  # True = background edit, must avoid cursor area
+
+
+def find_safe_boundary(text: str, cursor_position: int) -> int:
+    """
+    For background edits — find the end of the last complete sentence
+    that ends at least one sentence before the cursor.
+
+    Returns the character index up to which the assistant may edit.
+    Returns 0 if there isn't enough text before the cursor to work with.
+    """
+    # Only look at text before the cursor
+    text_before = text[:cursor_position]
+
+    # Find all sentence-ending positions (., !, ?)
+    sentence_ends = [m.end() for m in re.finditer(r'[.!?]\s+', text_before)]
+
+    # We need at least two sentence endings — target everything before the second-to-last
+    # This ensures we stay at least one full sentence away from the cursor
+    if len(sentence_ends) < 2:
+        return 0
+
+    # Return the end of the second-to-last sentence as the safe boundary
+    return sentence_ends[-2]
 
 def normalise(s: str) -> str:
     # replace curly quotes with straight equivalents
@@ -86,7 +111,7 @@ async def mock_edit_stream(text: str, cursor_position: int):
     yield f"event: done\ndata: {{}}\n\n"
 
 
-async def anthropic_edit_stream(text: str, cursor_position: int):
+async def anthropic_edit_stream(text: str, cursor_position: int, background: bool):
     """
     Calls the Anthropic API to select and rewrite a passage in the text.
 
@@ -102,14 +127,27 @@ async def anthropic_edit_stream(text: str, cursor_position: int):
 
     # Step 1 — pick a mode
     mode_name, mode_instruction = pick_mode()
-    print(f"Mode: {mode_name}")
+    edit_type = "background" if background else "pause"
+    print(f"Mode: {mode_name} -- {edit_type}")
+
+    # Step 1.1 — determine the text the assistant is allowed to edit
+    if background:
+        safe_boundary = find_safe_boundary(text, cursor_position)
+        if safe_boundary == 0:
+            # Not enough text before cursor to edit safely
+            yield f"event: done\ndata: {{}}\n\n"
+            return
+        # Only show the assistant the safe portion
+        editable_text = text[:safe_boundary]
+    else:
+        editable_text = text
 
     # Step 2 — call the API via ClaudeClient
     try:
         full_response = client.stream(
             messages=client.create_message(
                 role="user",
-                context_prompt=build_prompt(text, mode_instruction)
+                context_prompt=build_prompt(editable_text, mode_instruction)
             ),
             system_prompt=SYSTEM_PROMPT,
             max_tokens=256,
@@ -141,13 +179,20 @@ async def anthropic_edit_stream(text: str, cursor_position: int):
         return
 
     # then when searching:
-    normalised_text = normalise(text)
+    normalised_text = normalise(editable_text)
     normalised_original = normalise(original)
+
 
     # Step 5 — find the original string in the text
     replace_start = normalised_text.find(normalised_original)
     if replace_start == -1:
         print(f"Original not found in text: '{original}'")
+        yield f"event: done\ndata: {{}}\n\n"
+        return
+
+    # Safety check — for background edits, verify the match is within safe boundary
+    if background and replace_start >= safe_boundary:
+        print(f"Background edit target outside safe zone — skipping")
         yield f"event: done\ndata: {{}}\n\n"
         return
 
@@ -176,10 +221,11 @@ async def anthropic_edit_stream(text: str, cursor_position: int):
 #         },
 #     )
 
+#  it registers the function below it as the handler for any POST request arriving at the /edit URL
 @app.post("/edit")
 async def edit(request: EditRequest):
     return StreamingResponse(
-        anthropic_edit_stream(request.text, request.cursor_position),
+        anthropic_edit_stream(request.text, request.cursor_position, request.background),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

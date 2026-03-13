@@ -4,11 +4,32 @@ const assistantCursor = document.getElementById('assistant-cursor');
 
 let pauseTimer = null;
 let isAssistantEditing = false;
+let backgroundTimer = null;
 //let currentEventSource = null;
 let currentReader = null;
 let activeEditSpan = null;
 
-const PAUSE_DELAY = 2500; // ms of silence before assistant acts
+const PAUSE_DELAY = 7000; // ms of silence before assistant acts
+const BG_MIN = 15000;  // 15 seconds
+const BG_MAX = 45000;  // 45 seconds
+
+// ─── Background timer ─────────────────────────────────────────────────────────
+// Fires independently of user activity. Schedules itself randomly after each
+// trigger. Stays dormant if assistant is already editing.
+
+function scheduleBackgroundEdit() {
+  clearTimeout(backgroundTimer);
+  const delay = BG_MIN + Math.random() * (BG_MAX - BG_MIN);
+  backgroundTimer = setTimeout(async () => {
+    if (!isAssistantEditing && getText().trim().length > 50) {
+      await triggerAssistantEdit(true); // true = background edit
+    }
+    scheduleBackgroundEdit(); // reschedule regardless
+  }, delay);
+}
+
+scheduleBackgroundEdit(); // start the background timer on load
+
 
 // ─── contenteditable text helpers ────────────────────────────────────────────
 // contenteditable divs don't have .value or .selectionStart like textareas do.
@@ -30,6 +51,14 @@ function getCursorPosition() {
 // Walk all text nodes inside the editor to build a DOM Range
 // covering character positions [start, end]
 function getDOMRange(start, end) {
+
+  // If editor is empty, return a range at the start of the editor
+  if (!editor.textContent.length) {
+    const range = document.createRange();
+    range.setStart(editor, 0);
+    range.setEnd(editor, 0);
+    return range;
+  }
   const range = document.createRange();
   let charCount = 0;
   let startSet = false;
@@ -78,18 +107,21 @@ function deleteRange(start, end) {
 // Insert one character at position, creating or reusing the highlight span
 function insertChar(char, position) {
   if (activeEditSpan) {
-    // Append to existing span — just extend its text
     activeEditSpan.textContent += char;
     return;
   }
 
-  // First character — create the highlight span and insert it
   const span = document.createElement('span');
   span.className = 'assistant-edit';
   span.textContent = char;
 
-  const range = getDOMRange(position, position);
-  range.insertNode(span);
+  // If editor has no text content, insert directly
+  if (!editor.textContent.length) {
+    editor.appendChild(span);
+  } else {
+    const range = getDOMRange(position, position);
+    range.insertNode(span);
+  }
 
   activeEditSpan = span;
 }
@@ -123,13 +155,13 @@ editor.addEventListener('input', () => {
 
   // trigger assistant edit if pause delay has been reached by the timer
   pauseTimer = setTimeout(() => {
-    triggerAssistantEdit();
+    triggerAssistantEdit(false);
   }, PAUSE_DELAY);
 });
 
 // ─── Trigger the assistant ────────────────────────────────────────────────────
 
-async function triggerAssistantEdit() {
+async function triggerAssistantEdit(background) {
   const text = getText();
   // the character index where the cursor is positioned.
   const cursorPos = getCursorPosition();
@@ -162,7 +194,7 @@ async function triggerAssistantEdit() {
     response = await fetch('/edit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, cursor_position: cursorPos }),
+      body: JSON.stringify({ text, cursor_position: cursorPos, background }),
     });
   } catch (e) {
     console.error('Edit request failed:', e);
