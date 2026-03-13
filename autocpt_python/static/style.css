@@ -1,6 +1,7 @@
 * {
     box-sizing: border-box;
-    margin: 0; padding: 0;
+    margin: 0;
+    padding: 0;
   }
 
 body {
@@ -12,13 +13,14 @@ body {
   align-items: center;
   justify-content: flex-start;
   min-height: 100vh;
-  padding: 60px 20px;
+  padding: 60px 20px 0 20px;
 }
 
 header {
-  width: 100%;
-  max-width: 720px;
-  margin-bottom: 40px;
+  width: 80vh;
+  /*max-width: 720px;*/
+  /*margin-bottom: 40px;*/
+  margin: 0 auto 40px auto;
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -45,17 +47,18 @@ h1 {
 /* Editor container — this is the contested territory */
 #editor-container {
   position: relative;
-  width: 100%;
-  max-width: 720px;
+  width: 80vh !important;
+  height: 80vh !important;
+
 }
 
 #editor {
   width: 100%;
-  min-height: 400px;
+  height: 100% !important;
+  overflow-y: none;
   background: transparent;
   border: none;
   border-top: 1px solid #222;
-  border-bottom: 1px solid #222;
   color: #e0e0e0;
   font-family: 'Georgia', serif;
   font-size: 1.1rem;
@@ -64,6 +67,7 @@ h1 {
   resize: none;
   outline: none;
   caret-color: #e0e0e0;
+  scrollbar-width: thin;
 }
 
 /* The assistant cursor — a second presence */
@@ -76,21 +80,23 @@ h1 {
   pointer-events: none;
 }
 
-    #assistant-cursor.active {
-      opacity: 1;
-      animation: cursorBlink 0.8s step-end infinite;
-    }
+#assistant-cursor.active {
+  opacity: 1;
+  animation: cursorBlink 0.8s step-end infinite;
+}
 
-    @keyframes cursorBlink {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0.2; }
-    }
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.2; }
+}
 
-    #hint {
-      margin-top: 24px;
-      font-size: 0.72rem;
-      color: #2a2a2a;
-      letter-spacing: 0.08em;
-      max-width: 720px;
-      width: 100%;
-    }
+
+#hint {
+  margin-top: 24px;
+  font-size: 0.72rem;
+  color: #2a2a2a;
+  letter-spacing: 0.08em;
+  width: 80vh;
+  /*max-width: 720px;
+  width: 100%;*/
+}

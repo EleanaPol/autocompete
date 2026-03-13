@@ -7,7 +7,8 @@ let isAssistantEditing = false;
 //let currentEventSource = null;
 let currentReader = null;
 
-const PAUSE_DELAY = 1800; // ms of silence before assistant acts
+const PAUSE_DELAY = 2500; // ms of silence before assistant acts
+
 
 // ─── Pause detection ──────────────────────────────────────────────────────────
 
@@ -78,39 +79,48 @@ async function triggerAssistantEdit() {
 
   // store reference so it can be cancelled
   currentReader = reader;
+  try{
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // keep incomplete line for next chunk
 
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop(); // keep incomplete line for next chunk
+        let eventType = null;
+        let dataLine = null;
 
-    let eventType = null;
-    let dataLine = null;
-
-    for (const line of lines) {
-      if (line.startsWith('event:')) {
-        eventType = line.slice(6).trim();
-      } else if (line.startsWith('data:')) {
-        dataLine = line.slice(5).trim();
-      } else if (line === '' && eventType && dataLine !== null) {
-        handleSSEEvent(eventType, JSON.parse(dataLine), {
-          get replaceStart() { return replaceStart; },
-          set replaceStart(v) { replaceStart = v; },
-          get replaceEnd() { return replaceEnd; },
-          set replaceEnd(v) { replaceEnd = v; },
-          get insertedLength() { return insertedLength; },
-          set insertedLength(v) { insertedLength = v; },
-        });
-        eventType = null;
-        dataLine = null;
+        for (const line of lines) {
+          if (line.startsWith('event:')) {
+            eventType = line.slice(6).trim();
+          } else if (line.startsWith('data:')) {
+            dataLine = line.slice(5).trim();
+          } else if (line === '' && eventType && dataLine !== null) {
+            handleSSEEvent(eventType, JSON.parse(dataLine), {
+              get replaceStart() { return replaceStart; },
+              set replaceStart(v) { replaceStart = v; },
+              get replaceEnd() { return replaceEnd; },
+              set replaceEnd(v) { replaceEnd = v; },
+              get insertedLength() { return insertedLength; },
+              set insertedLength(v) { insertedLength = v; },
+            });
+            eventType = null;
+            dataLine = null;
+          }
+        }
       }
+  }catch (e) {
+    if (e.name !== 'AbortError') {
+      console.error('Stream error:', e);
     }
+  } finally {
+    currentReader = null;
+    resetAssistantState();
+    autoResize(); // resize after assistant edits too
   }
 
-  resetAssistantState();
+  //resetAssistantState();
 }
 
 // ─── SSE event handler ────────────────────────────────────────────────────────
@@ -154,8 +164,8 @@ function positionAssistantCursor(charIndex) {
   const containerRect = editor.parentElement.getBoundingClientRect();
   const editorRect = editor.getBoundingClientRect();
 
-  assistantCursor.style.left = (editorRect.left - containerRect.left + coords.left) + 'px';
-  assistantCursor.style.top  = (editorRect.top  - containerRect.top  + coords.top)  + 'px';
+  assistantCursor.style.left   = (editorRect.left - containerRect.left + coords.left) + 'px';
+  assistantCursor.style.top    = (editorRect.top  - containerRect.top  + coords.top - editor.scrollTop) + 'px';
   assistantCursor.style.height = coords.height + 'px';
 }
 
@@ -177,6 +187,9 @@ function resetAssistantState() {
 }
 
 // ─── Caret coordinate helper ──────────────────────────────────────────────────
+// Mirrors the textarea into a hidden div to measure character pixel position.
+// The mirror is appended to document.body so its getBoundingClientRect()
+// is also viewport-relative — consistent with editorRect above.
 
 function getCaretCoordinates(element, position) {
   const mirror = document.createElement('div');
@@ -191,17 +204,24 @@ function getCaretCoordinates(element, position) {
     'textIndent', 'letterSpacing', 'wordSpacing',
   ];
 
-  mirror.style.position = 'absolute';
+//  mirror.style.position = 'absolute';
+//  mirror.style.visibility = 'hidden';
+//  mirror.style.whiteSpace = 'pre-wrap';
+//  mirror.style.wordWrap = 'break-word';
+
+  mirror.style.position = 'fixed'; // fixed so it's always viewport-relative
   mirror.style.visibility = 'hidden';
   mirror.style.whiteSpace = 'pre-wrap';
   mirror.style.wordWrap = 'break-word';
+  mirror.style.top = editorRect_top() + 'px'; // anchor mirror to editor position
+  mirror.style.left = editorRect_left() + 'px';
 
   properties.forEach(prop => {
     mirror.style[prop] = style[prop];
   });
 
-  mirror.style.top = '0';
-  mirror.style.left = '0';
+//  mirror.style.top = '0';
+//  mirror.style.left = '0';
 
   const textContent = element.value.substring(0, position);
   mirror.textContent = textContent;
@@ -223,3 +243,7 @@ function getCaretCoordinates(element, position) {
     height: rect.height,
   };
 }
+
+function editorRect_top()  { return editor.getBoundingClientRect().top; }
+function editorRect_left() { return editor.getBoundingClientRect().left; }
+

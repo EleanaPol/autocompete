@@ -5,6 +5,9 @@ from pydantic import BaseModel
 from claude_client import ClaudeClient
 from prompt import pick_mode, build_prompt, SYSTEM_PROMPT
 import asyncio, json, os
+import unicodedata
+
+
 
 app = FastAPI()
 client = ClaudeClient()  # reads ANTHROPIC_API_KEY from .env automatically
@@ -19,6 +22,10 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 class EditRequest(BaseModel):
     text: str
     cursor_position: int
+
+def normalise(s: str) -> str:
+    # replace curly quotes with straight equivalents
+    return s.replace('\u2018', "'").replace('\u2019', "'").replace('\u201c', '"').replace('\u201d', '"')
 
 # Mock Stream Generator
 
@@ -123,6 +130,8 @@ async def anthropic_edit_stream(text: str, cursor_position: int):
     original = result.get("original")
     replacement = result.get("replacement")
 
+
+
     print(f"Original: {original}")
     print(f"Replacement: {replacement}")
 
@@ -131,14 +140,18 @@ async def anthropic_edit_stream(text: str, cursor_position: int):
         yield f"event: done\ndata: {{}}\n\n"
         return
 
+    # then when searching:
+    normalised_text = normalise(text)
+    normalised_original = normalise(original)
+
     # Step 5 — find the original string in the text
-    replace_start = text.find(original)
+    replace_start = normalised_text.find(normalised_original)
     if replace_start == -1:
         print(f"Original not found in text: '{original}'")
         yield f"event: done\ndata: {{}}\n\n"
         return
 
-    replace_end = replace_start + len(original)
+    replace_end = replace_start + len(normalised_original)
 
     # Step 6 — send the meta event
     meta = {"replace_start": replace_start, "replace_end": replace_end}
@@ -147,7 +160,7 @@ async def anthropic_edit_stream(text: str, cursor_position: int):
     # Step 7 — stream the replacement character by character
     for char in replacement:
         yield f"event: token\ndata: {json.dumps({'char': char})}\n\n"
-        await asyncio.sleep(0.05)
+        await asyncio.sleep(0.08)
 
     yield f"event: done\ndata: {{}}\n\n"
 

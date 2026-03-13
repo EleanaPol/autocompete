@@ -6,7 +6,8 @@ modes:
     Target a single word or short phrase. Make a change so small the human 
     might not notice — a synonym that shifts the meaning slightly, 
     a word that sounds more polished but loses something personal.
-    The human should feel uncertain whether anything changed at all.
+    Make sure you do change something, don't rewrite the original phrase as is.
+# The human should feel uncertain whether anything changed at all.
   assertive: |
     Your intervention should be confident and clear.
     Target a full phrase or clause. Rewrite it to be more precise, 
