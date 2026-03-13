@@ -160,7 +160,7 @@ async def anthropic_edit_stream(text: str, cursor_position: int):
     # Step 7 — stream the replacement character by character
     for char in replacement:
         yield f"event: token\ndata: {json.dumps({'char': char})}\n\n"
-        await asyncio.sleep(0.08)
+        await asyncio.sleep(0.05)
 
     yield f"event: done\ndata: {{}}\n\n"
 

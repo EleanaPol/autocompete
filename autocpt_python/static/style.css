@@ -70,6 +70,23 @@ h1 {
   scrollbar-width: thin;
 }
 
+/* placeholder via CSS since contenteditable has none built in */
+#editor:empty::before {
+  content: attr(data-placeholder);
+  color: #333;
+  pointer-events: none;
+}
+
+/* assistant's inserted text — starts amber, fades to normal */
+.assistant-edit {
+  color: #a07050;
+  transition: color 2.5s ease;
+}
+
+.assistant-edit.fade {
+  color: #e0e0e0;
+}
+
 /* The assistant cursor — a second presence */
 #assistant-cursor {
   position: absolute;
