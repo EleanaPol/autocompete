@@ -90,7 +90,8 @@ h1 {
 /* The assistant cursor — a second presence */
 #assistant-cursor {
   position: absolute;
-  width: 2px;
+  /*width: 2px;*/
+  width: 0.65em;
   background: #a07050;
   opacity: 0;
   transition: opacity 0.2s;

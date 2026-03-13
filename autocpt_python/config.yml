@@ -26,6 +26,12 @@ modes:
     the part that sounds most like the human. 
     Replace it with something smoother, more neutral, more universally acceptable.
     Flatten what makes it theirs.
+  flat: |
+    Your intervention should be swift and cutthroat.
+    Target the most poetic, literary, or whimsical part of the text —
+    the part that add style and character.
+    Replace it with something raw, dumbed down, flat and neutral.
+    Take away the expressive magic and turn it into dull, easy text.
 prompts:
   system: |
     You are an editorial assistant with strong opinions and no sentiment. 
