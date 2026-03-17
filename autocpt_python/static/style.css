@@ -7,7 +7,9 @@
 body {
   background: #0f0f0f;
   color: #e0e0e0;
-  font-family: 'Georgia', serif;
+ /* font-family: 'IBM Plex Serif', serif;*/
+  font-family:  'Space Mono', monospace;
+  /*font-family: 'Georgia', serif;*/
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -16,7 +18,11 @@ body {
   padding: 60px 20px 0 20px;
 }
 
-header {
+#intro header {
+  text-align: center;
+}
+
+#editor-container header {
   width: 80vh;
   /*max-width: 720px;*/
   /*margin-bottom: 40px;*/
@@ -27,11 +33,45 @@ header {
 }
 
 h1 {
+  font-family: 'Georgia', serif;
+  /*font-family: 'Cormorant Garamond', serif;*/
+  /*font-family:  'Space Mono', monospace;*/
   font-size: 2rem;
-  font-weight: normal;
+  font-weight: 400; /* normal;*/
   letter-spacing: 0.2em;
-  text-transform: lowercase;
+/*text-transform: lowercase;*/
+  color: #e0e0e0; /*#555;*/
+}
+
+#typewriter {
+  position: relative;
+  width: 80vh !important;
+  /*font-family: 'Georgia', serif;*/
+  font-size: 1.1rem;
   color: #555;
+  line-height: 1.8;
+  padding: 32px 0;
+  margin-top: 150px !important;
+}
+
+#begin-btn {
+  background: transparent;
+  border-radius: 20px;
+  border: 1px solid #333;
+  color: #e0e0e0;
+  font-family: 'IBM Plex Serif', serif;
+  font-weight: 300;
+  font-size: 0.9rem;
+  letter-spacing: 0.2em;
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: border-color 0.3s, color 0.3s;
+  text-align: center;
+}
+
+#begin-btn:hover {
+  border-color: #e0e0e0;
+  color: #ffffff;
 }
 
 #status {
@@ -49,6 +89,7 @@ h1 {
   position: relative;
   width: 80vh !important;
   height: 80vh !important;
+  margin-top: 150px !important;
 
 }
 
@@ -118,3 +159,5 @@ h1 {
   /*max-width: 720px;
   width: 100%;*/
 }
+
+

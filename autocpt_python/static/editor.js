@@ -1,14 +1,37 @@
 const editor = document.getElementById('editor');
-const status = document.getElementById('status');
+//const status = document.getElementById('status');
 const assistantCursor = document.getElementById('assistant-cursor');
+const typewriter = document.getElementById('typewriter');
+const beginButton = document.getElementById('begin-btn');
+const intro_mode = document.getElementById('intro');
+const edit_mode = document.getElementById('editor-container');
 
+let introTimer =null;
+let buttonTimer = null;
 let pauseTimer = null;
+let isEditingActive = false;
 let isAssistantEditing = false;
 let backgroundTimer = null;
 //let currentEventSource = null;
 let currentReader = null;
 let activeEditSpan = null;
 
+
+
+const introText = `What is it that really makes us special? How do we distinguish ourselves from others? What if money didn't matter. Status didn't matter. Degrees didn't matter.
+
+What remains? What makes you distinct?
+
+Do you belong with the select few?
+
+Don't write what you think we want to hear. Write what's true.
+
+Be honest. Be bold.`;
+const chars = [...introText];
+
+let CHAR_DELAY = 50;
+const INTRO_DELAY = 2000; // 3 seconds before intro starts typing behavior
+const BUTTON_DELAY = 1000; // 1 second after typing is done
 const PAUSE_DELAY = 7000; // ms of silence before assistant acts
 const BG_MIN = 15000;  // 15 seconds
 const BG_MAX = 45000;  // 45 seconds
@@ -20,15 +43,69 @@ const BG_MAX = 45000;  // 45 seconds
 function scheduleBackgroundEdit() {
   clearTimeout(backgroundTimer);
   const delay = BG_MIN + Math.random() * (BG_MAX - BG_MIN);
+
   backgroundTimer = setTimeout(async () => {
-    if (!isAssistantEditing && getText().trim().length > 50) {
+    if (!isAssistantEditing && isEditingActive && getText().trim().length > 50) {
       await triggerAssistantEdit(true); // true = background edit
     }
     scheduleBackgroundEdit(); // reschedule regardless
   }, delay);
 }
 
-scheduleBackgroundEdit(); // start the background timer on load
+//scheduleBackgroundEdit(); // start the background timer on load
+
+// ─── Typing timer ─────────────────────────────────────────────────────────
+function scheduleIntroTyping(){
+  console.log('scheduleIntroTyping called');
+  setTimeout(() => {
+  typeNextChar(0);    // start at index 0
+}, INTRO_DELAY);
+
+}
+
+
+function typeNextChar(index){
+  if (index >= chars.length) {
+    setTimeout(()=> {beginButton.style.display = 'block';},BUTTON_DELAY)
+    return; // stop when done
+  }
+
+  typeIntro(chars[index])
+
+  setTimeout(() => {
+    typeNextChar(index + 1);         // schedule the next character
+  }, CHAR_DELAY);                            // delay between characters
+
+
+}
+function typeIntro(char){
+  if (char === '\n') {
+    typewriter.innerHTML += '<br>';
+    CHAR_DELAY = 600;
+  } else if(char === '.' || char === '?'){
+    typewriter.innerHTML += char;
+    CHAR_DELAY = 400;
+  }
+  else {
+    typewriter.innerHTML += char;
+    CHAR_DELAY = 50;
+  }
+}
+
+scheduleIntroTyping();
+
+// ─── Begin ──────────────────────────────────────────────────────────
+function beginEditor(){
+  intro_mode.style.display = 'none';
+  edit_mode.style.display = 'block';
+  isEditingActive = true;
+  scheduleBackgroundEdit();
+}
+
+beginButton.addEventListener('click', beginEditor);
+
+
+
 
 
 // ─── contenteditable text helpers ────────────────────────────────────────────
@@ -143,15 +220,16 @@ editor.addEventListener('keydown', (e) => {
 });
 
 
+
 // ─── Pause detection ──────────────────────────────────────────────────────────
 
 // add listener to the editor to run function everytime the user types
 editor.addEventListener('input', () => {
-  if (isAssistantEditing) return; // don't trigger while assistant is writing
+  if (isAssistantEditing || !isEditingActive) return; // don't trigger while assistant is writing
 
   // stop/clear the timer when user is typing
   clearTimeout(pauseTimer);
-  setStatus('watching');
+//  setStatus('watching');
 
   // trigger assistant edit if pause delay has been reached by the timer
   pauseTimer = setTimeout(() => {
@@ -162,6 +240,7 @@ editor.addEventListener('input', () => {
 // ─── Trigger the assistant ────────────────────────────────────────────────────
 
 async function triggerAssistantEdit(background) {
+
   const text = getText();
   // the character index where the cursor is positioned.
   const cursorPos = getCursorPosition();
@@ -181,7 +260,7 @@ async function triggerAssistantEdit(background) {
   }
 
   isAssistantEditing = true;
-  setStatus('editing', 'assistant is editing');
+//  setStatus('editing', 'assistant is editing');
   showAssistantCursor(true);
 
   // We'll build the replacement here as tokens arrive
@@ -335,15 +414,15 @@ function showAssistantCursor(visible) {
 
 // ─── Status ───────────────────────────────────────────────────────────────────
 
-function setStatus(className, text) {
-  status.className = className || '';
-  status.textContent = text || (className === 'watching' ? 'watching' : '—');
-}
+//function setStatus(className, text) {
+//  status.className = className || '';
+//  status.textContent = text || (className === 'watching' ? 'watching' : '—');
+//}
 
 function resetAssistantState() {
   isAssistantEditing = false;
   showAssistantCursor(false);
-  setStatus('', '—');
+//  setStatus('', '—');
 }
 
 // ─── Caret coordinate helper ──────────────────────────────────────────────────
