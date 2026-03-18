@@ -24,9 +24,13 @@ What remains? What makes you distinct?
 
 Do you belong with the select few?
 
+Only your words can reveal what you're really made of and if you are truly worthy to join us.
+
 Don't write what you think we want to hear. Write what's true.
 
-Be honest. Be bold.`;
+Be honest. Be bold.
+
+Your chance is now.`;
 const chars = [...introText];
 
 let CHAR_DELAY = 50;
@@ -43,6 +47,7 @@ const BG_MAX = 45000;  // 45 seconds
 function scheduleBackgroundEdit() {
   clearTimeout(backgroundTimer);
   const delay = BG_MIN + Math.random() * (BG_MAX - BG_MIN);
+  console.log('background activated');
 
   backgroundTimer = setTimeout(async () => {
     if (!isAssistantEditing && isEditingActive && getText().trim().length > 50) {
@@ -96,6 +101,7 @@ scheduleIntroTyping();
 
 // ─── Begin ──────────────────────────────────────────────────────────
 function beginEditor(){
+console.log('button clicked');
   intro_mode.style.display = 'none';
   edit_mode.style.display = 'block';
   isEditingActive = true;
