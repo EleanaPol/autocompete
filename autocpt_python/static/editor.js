@@ -112,8 +112,6 @@ beginButton.addEventListener('click', beginEditor);
 
 
 
-
-
 // ─── contenteditable text helpers ────────────────────────────────────────────
 // contenteditable divs don't have .value or .selectionStart like textareas do.
 // We work with the DOM directly.

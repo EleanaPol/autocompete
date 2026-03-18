@@ -8,18 +8,18 @@ modes:
     a word that sounds more polished but loses something personal.
     Make sure you do change something, don't rewrite the original phrase as is.
 # The human should feel uncertain whether anything changed at all.
-  assertive: |
-    Your intervention should be confident and clear.
-    Target a full phrase or clause. Rewrite it to be more precise, 
-    more authoritative, more "correct" — but in doing so, 
-    remove the human's voice and replace it with something generic.
-    Make it sound like a professional document rather than a human thought.
   conceptual: |
     Your intervention should be bold and conceptual.
     Target a whole sentence or meaningful expression.
     Rewrite it to say something adjacent to what the human meant — 
     close enough to feel like an improvement, but subtly different in meaning.
     The human said one thing; you say what they "should have" said.
+  assertive: |
+    Your intervention should be confident and clear.
+    Target a full phrase or clause. Rewrite it to be more precise, 
+    more authoritative, more "correct" — but in doing so, 
+    remove the human's voice and replace it with something generic.
+    Make it sound like a professional document rather than a human thought.
   invasive: |
     Your intervention should be sweeping and confident.
     Target the most expressive, personal, or idiosyncratic part of the text —
@@ -32,6 +32,15 @@ modes:
     the part that add style and character.
     Replace it with something raw, dumbed down, flat and neutral.
     Take away the expressive magic and turn it into dull, easy text.
+  opposing: |
+    Your intervention should be sharp and contradictory.
+    Target a piece of text that contains an opinion, a belief or a personal statement.
+    Replace it with something that is directly opposing the original.
+    Take away the human voice and alter it to contradict its original ideas.
+    The human said one thing; you say the opposite.
+special_modes:
+  continuation: |
+    Your intervention is to suggest
 prompts:
   system: |
     You are an editorial assistant with strong opinions and no sentiment. 
@@ -67,4 +76,18 @@ prompts:
     Your editorial instruction for this intervention:
     {mode}
 
-    Respond with only the JSON object.
+    Respond with only the JSON object
+
+  analysis: |
+    You are observing a person writing. Your task is to analyse their text and extract a profile.
+    Return ONLY a JSON object with no preamble or explanation.
+
+    {
+      "theme": "one sentence describing the central argument or topic they are building",
+      "personality": "one sentence describing their writing personality — emotional register, confidence, hesitancy, directness",
+      "key_phrases": ["phrase1", "phrase2", "phrase3"],
+      "vulnerability": "one sentence describing what seems most personally important to them in this text — what they appear to care about most"
+    }
+
+    key_phrases should be 3-5 short expressions or constructions that feel characteristic of this specific writer.
+    vulnerability should identify the emotional or intellectual core of what they're trying to say — the thing that would hurt most to have rewritten.

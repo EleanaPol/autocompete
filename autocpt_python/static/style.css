@@ -121,6 +121,7 @@ h1 {
   outline: none;
   caret-color: #e0e0e0;
   scrollbar-width: thin;
+  white-space: pre-wrap;
 }
 
 /* placeholder via CSS since contenteditable has none built in */
