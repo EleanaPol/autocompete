@@ -15,6 +15,8 @@ let backgroundTimer = null;
 //let currentEventSource = null;
 let currentReader = null;
 let activeEditSpan = null;
+let profilingStarted = False;
+let lastProfilingCharCount = 0;
 
 
 
@@ -33,6 +35,11 @@ Be honest. Be bold.
 Your chance is now.`;
 const chars = [...introText];
 
+// ─── Character Limits ─────────────────────────────────────────────────────────
+const ANALYSIS_THRESHOLD = 400;
+const ANALYSIS_INTERVAL = 150;
+
+// ─── Delays and times ─────────────────────────────────────────────────────────
 let CHAR_DELAY = 50;
 const INTRO_DELAY = 2000; // 3 seconds before intro starts typing behavior
 const BUTTON_DELAY = 1000; // 1 second after typing is done
