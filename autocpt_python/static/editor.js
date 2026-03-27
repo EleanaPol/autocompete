@@ -15,8 +15,9 @@ let backgroundTimer = null;
 //let currentEventSource = null;
 let currentReader = null;
 let activeEditSpan = null;
-let profilingStarted = False;
+let profilingStarted = false;
 let lastProfilingCharCount = 0;
+let isAnalysing = false;
 
 
 
@@ -231,7 +232,8 @@ editor.addEventListener('keydown', (e) => {
 });
 
 
-
+// ================== USER INPUT ================================================
+// ==============================================================================
 // ─── Pause detection ──────────────────────────────────────────────────────────
 
 // add listener to the editor to run function everytime the user types
@@ -242,16 +244,54 @@ editor.addEventListener('input', () => {
   clearTimeout(pauseTimer);
 //  setStatus('watching');
 
+  // test for profiling activation
+  let charCount = getText().length;
+  if(charCount>= ANALYSIS_THRESHOLD && !profilingStarted )
+  {
+    // trigger the initial profiling command
+    //lastProfilingCharCount = charCount;
+    triggerProfiling(true)
+  }
+  else if ( profilingStarted && (charCount - lastProfilingCharCount) >= ANALYSIS_INTERVAL ){
+    // trigger the profiling update command
+    //lastProfilingCharCount = charCount;
+    triggerProfiling(false)
+  }
+
   // trigger assistant edit if pause delay has been reached by the timer
   pauseTimer = setTimeout(() => {
     triggerAssistantEdit(false);
   }, PAUSE_DELAY);
 });
 
+
+// ─── Trigger profiling ────────────────────────────────────────────────────────
+async function triggerProfiling(isFirst){
+  if (isAnalysing) return;
+  isAnalysing = true;
+  const text = getText();
+
+  let response;
+  try {
+    response = await fetch('/analyse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text}),
+    });
+    lastProfilingCharCount = getText().length;
+    if (isFirst) profilingStarted = true;
+  } catch (e) {
+    console.error('Analyse request failed:', e);
+    //return;
+  }finally {
+    isAnalysing = false;
+  }
+}
+
 // ─── Trigger the assistant ────────────────────────────────────────────────────
 
 async function triggerAssistantEdit(background) {
-
+  if(isAssistantEditing) return;
   const text = getText();
   // the character index where the cursor is positioned.
   const cursorPos = getCursorPosition();
@@ -263,14 +303,14 @@ async function triggerAssistantEdit(background) {
 //    currentEventSource.close();
 //    currentEventSource = null;
 //  }
-
+  isAssistantEditing = true;
   // Cancel any in-progress stream
   if (currentReader) {
     await currentReader.cancel();
     currentReader = null;
   }
 
-  isAssistantEditing = true;
+
 //  setStatus('editing', 'assistant is editing');
   showAssistantCursor(true);
 

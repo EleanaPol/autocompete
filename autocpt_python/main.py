@@ -1,9 +1,11 @@
+from typing import Tuple
+
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from claude_client import ClaudeClient
-from prompt import pick_mode, build_prompt, build_analysis_prompt, SYSTEM_PROMPT, ANALYSIS_SYSTEM_PROMPT
+from prompt import pick_mode, build_prompt, build_analysis_prompt, SYSTEM_PROMPT, SYSTEM_PROMPT_2, SYSTEM_PROMPT_3, ANALYSIS_SYSTEM_PROMPT
 import asyncio, json, os
 import unicodedata
 import re
@@ -16,6 +18,7 @@ client = ClaudeClient()  # reads ANTHROPIC_API_KEY from .env automatically
 first_profile = True
 has_profile = False
 writer_profile = None
+profile_count = 0
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -64,6 +67,31 @@ def get_profile_string(profile: dict) -> str:
     if profile is None:
         return ""
     return json.dumps(profile, indent=2)
+
+
+def get_profile_traits(profile: dict) -> Tuple[str, str]:
+    if profile is None:
+        return "", ""
+    return profile['personality'], profile['vulnerability']
+
+
+def strip_code_fences(response: str) -> str:
+    cleaned = response.strip()
+    if cleaned.startswith("```"):
+        # remove opening fence
+        cleaned = cleaned.split("\n", 1)[1]
+        # remove closing fence
+        if cleaned.endswith("```"):
+            cleaned = cleaned.rsplit("```", 1)[0]
+    return cleaned.strip()
+
+
+def get_phase_system_prompt(num_profiles: int=0):
+    if num_profiles == 0:
+        return SYSTEM_PROMPT
+    elif num_profiles <= 3:
+        return SYSTEM_PROMPT_2
+    return SYSTEM_PROMPT_3
 
 # Mock Stream Generator
 
@@ -140,6 +168,8 @@ async def anthropic_edit_stream(text: str, cursor_position: int, background: boo
     7. Send done
     """
 
+    global has_profile, profile_count
+
     # Step 1 — pick a mode
     mode_name, mode_instruction = pick_mode()
     edit_type = "background" if background else "pause"
@@ -148,7 +178,10 @@ async def anthropic_edit_stream(text: str, cursor_position: int, background: boo
     # Step 2 - manage writer profile
     profile_str = get_profile_string(writer_profile)
 
-    # Step 1.1 — determine the text the assistant is allowed to edit
+    # Step 3 - extract profile traits
+    profile_traits = get_profile_traits(writer_profile)
+
+    # Step 4 — determine the text the assistant is allowed to edit
     if background:
         safe_boundary = find_safe_boundary(text, cursor_position)
         if safe_boundary == 0:
@@ -159,15 +192,19 @@ async def anthropic_edit_stream(text: str, cursor_position: int, background: boo
         editable_text = text[:safe_boundary]
     else:
         editable_text = text
+    print (f"profiles generated so far: {profile_count}")
 
-    # Step 2 — call the API via ClaudeClient
+    # get correct system prompt
+    system_prompt = get_phase_system_prompt(profile_count)
+
+    # Step 5 — call the API via ClaudeClient
     try:
         full_response = client.stream(
             messages=client.create_message(
                 role="user",
-                context_prompt=build_prompt(editable_text, mode_instruction, profile_str, has_profile)
+                context_prompt=build_prompt(editable_text, mode_instruction, profile_str, has_profile, profile_count, profile_traits[0], profile_traits[1]),
             ),
-            system_prompt=SYSTEM_PROMPT,
+            system_prompt=system_prompt,
             max_tokens=256,
         )
     except Exception as e:
@@ -175,9 +212,9 @@ async def anthropic_edit_stream(text: str, cursor_position: int, background: boo
         yield f"event: done\ndata: {{}}\n\n"
         return
 
-    # Step 3 — parse the JSON response
+    # Step 6 — parse the JSON response
     try:
-        result = json.loads(full_response.strip())
+        result = json.loads(strip_code_fences(full_response.strip()))
     except json.JSONDecodeError:
         print(f"JSON parse error. Raw response: {full_response}")
         yield f"event: done\ndata: {{}}\n\n"
@@ -190,7 +227,7 @@ async def anthropic_edit_stream(text: str, cursor_position: int, background: boo
     print(f"Original: {original}")
     print(f"Replacement: {replacement}")
 
-    # Step 4 — if the model found nothing worth changing, do nothing
+    # Step 7 — if the model found nothing worth changing, do nothing
     if not original or not replacement:
         yield f"event: done\ndata: {{}}\n\n"
         return
@@ -200,7 +237,7 @@ async def anthropic_edit_stream(text: str, cursor_position: int, background: boo
     normalised_original = normalise(original)
 
 
-    # Step 5 — find the original string in the text
+    # Step 8 — find the original string in the text
     replace_start = normalised_text.find(normalised_original)
     if replace_start == -1:
         print(f"Original not found in text: '{original}'")
@@ -215,11 +252,11 @@ async def anthropic_edit_stream(text: str, cursor_position: int, background: boo
 
     replace_end = replace_start + len(normalised_original)
 
-    # Step 6 — send the meta event
+    # Step 9 — send the meta event
     meta = {"replace_start": replace_start, "replace_end": replace_end}
     yield f"event: meta\ndata: {json.dumps(meta)}\n\n"
 
-    # Step 7 — stream the replacement character by character
+    # Step 10 — stream the replacement character by character
     for char in replacement:
         yield f"event: token\ndata: {json.dumps({'char': char})}\n\n"
         await asyncio.sleep(0.05)
@@ -229,8 +266,8 @@ async def anthropic_edit_stream(text: str, cursor_position: int, background: boo
 
 async def anthropic_extract_profile(text: str) -> dict:
 
-    global first_profile, writer_profile
-
+    global first_profile, writer_profile, has_profile, profile_count
+    print("Fired Profiling Step:")
     existing_profile = writer_profile
 
     # Step 1. Manage writer profile
@@ -246,13 +283,17 @@ async def anthropic_extract_profile(text: str) -> dict:
 
     # Step 3. Call the API via ClaudeClient
     try:
-        full_analysis_response = client.stream(
-            messages=client.create_message(
-                role="user",
-                context_prompt=a_prompt
-            ),
-            system_prompt=ANALYSIS_SYSTEM_PROMPT,
-            max_tokens=512,
+        loop = asyncio.get_event_loop()
+        full_analysis_response = await loop.run_in_executor(
+            None,
+            lambda: client.call(
+                messages=client.create_message(
+                    role="user",
+                    context_prompt=a_prompt
+                ),
+                system_prompt=ANALYSIS_SYSTEM_PROMPT,
+                max_tokens=512
+            )
         )
     except Exception as e:
         print(f"Anthropic API error: {e}")
@@ -260,9 +301,12 @@ async def anthropic_extract_profile(text: str) -> dict:
 
     # Step 4. parse the JSON response
     try:
-        new_profile = json.loads(full_analysis_response.strip())
+        new_profile = json.loads(strip_code_fences(full_analysis_response.strip()))
+        print(f"Raw Profile: {new_profile}")
         first_profile = False
         writer_profile = new_profile
+        has_profile = True
+        profile_count += 1
     except json.JSONDecodeError:
         print(f"JSON parse error. Raw response: {full_analysis_response}")
         writer_profile = existing_profile
@@ -292,6 +336,12 @@ async def edit(request: EditRequest):
             "X-Accel-Buffering": "no",
         },
     )
+
+#  it registers the function below it as the handler for any POST request arriving at the /analyse URL
+@app.post("/analyse")
+async def edit(request: AnalyseRequest):
+    await anthropic_extract_profile(request.text)
+    return {"status": "ok"}
 
 
 @app.get("/")

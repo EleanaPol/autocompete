@@ -11,6 +11,7 @@ class ClaudeClient:
             self,
             api_key: str | None = None,
             default_model: str = "claude-sonnet-4-6",
+            #default_model="claude-haiku-4-5-20251001",
     ):
         self.client = anthropic.Anthropic(
             api_key=api_key or os.environ["ANTHROPIC_API_KEY"]
